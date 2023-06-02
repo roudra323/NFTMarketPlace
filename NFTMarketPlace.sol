@@ -22,8 +22,8 @@ contract NFTMarketPlace is ERC721URIStorage, Ownable {
 
     struct MarketItem {
         uint256 tokenId;
-        address payable seller;
-        address payable owner;
+        address payable seller; // the contract will be the seller
+        address payable owner; // the owner will be the owner
         uint256 price;
         bool isSold;
     }
@@ -45,7 +45,11 @@ contract NFTMarketPlace is ERC721URIStorage, Ownable {
      * @dev Updates the listing price for creating a market item.
      * @param _listingPrice The new listing price.
      */
-    function updateListingPrice(uint256 _listingPrice) public payable onlyOwner {
+    function updateListingPrice(uint256 _listingPrice)
+        public
+        payable
+        onlyOwner
+    {
         listingPrice = _listingPrice;
     }
 
@@ -94,17 +98,17 @@ contract NFTMarketPlace is ERC721URIStorage, Ownable {
         );
         idMarketItem[_tokenId] = MarketItem(
             _tokenId,
-            payable(msg.sender),
-            payable(address(this)),
+            payable(address(this)), // making the caller seller
+            payable(msg.sender), // making the caller owner
             _price,
             false
         );
-        _transfer(msg.sender, address(this), _tokenId);
+        _transfer(msg.sender, address(this), _tokenId); // transfer from caller to the contract
 
         emit idMarketItemCreated(
             _tokenId,
-            msg.sender,
             address(this),
+            msg.sender,
             _price,
             false
         );
@@ -140,18 +144,21 @@ contract NFTMarketPlace is ERC721URIStorage, Ownable {
      */
     function createMarketSale(uint256 tokenId) public payable {
         uint256 price = idMarketItem[tokenId].price;
+        address  itemSeller = idMarketItem[tokenId].owner;
 
         require(msg.value == price, "Please submit the asked price");
-        idMarketItem[tokenId].owner = payable(msg.sender);
-        idMarketItem[tokenId].isSold = true;
-        idMarketItem[tokenId].seller = payable(address(0));
 
         _itemsSold.increment();
 
         _transfer(address(this), msg.sender, tokenId);
 
         payable(owner()).transfer(listingPrice);
-        payable(idMarketItem[tokenId].seller).transfer(msg.value);
+        payable(idMarketItem[tokenId].owner).transfer(msg.value);
+
+
+        idMarketItem[tokenId].seller = payable(itemSeller);
+        idMarketItem[tokenId].isSold = true;
+        idMarketItem[tokenId].owner =  payable(msg.sender);
     }
 
     /**
@@ -165,7 +172,7 @@ contract NFTMarketPlace is ERC721URIStorage, Ownable {
 
         MarketItem[] memory items = new MarketItem[](unSoldItemCount);
         for (uint256 i = 0; i < itemCount; i++) {
-            if (idMarketItem[i + 1].owner == address(this)) {
+            if (idMarketItem[i + 1].seller == address(this)) {
                 items[currentIndex] = idMarketItem[i + 1];
                 currentIndex += 1;
             }
@@ -188,7 +195,7 @@ contract NFTMarketPlace is ERC721URIStorage, Ownable {
         }
 
         MarketItem[] memory items = new MarketItem[](itemCount);
-        uint256 currentIndex = 0;
+        uint256 currentIndex;
 
         for (uint256 i = 0; i < totalCount; i++) {
             if (idMarketItem[i + 1].owner == msg.sender) {
@@ -201,7 +208,7 @@ contract NFTMarketPlace is ERC721URIStorage, Ownable {
     }
 
     /**
-     * @dev Fetches the market items listed by the caller.
+     * @dev Fetches the market items which are unsold listed by the caller.
      * @return An array of MarketItem representing the caller's listed market items.
      */
     function fetchItemsListed() public view returns (MarketItem[] memory) {
@@ -209,19 +216,21 @@ contract NFTMarketPlace is ERC721URIStorage, Ownable {
         uint256 itemCount = 0;
 
         for (uint256 i = 0; i < totalCount; i++) {
-            if (idMarketItem[i + 1].seller == msg.sender) {
+            if (idMarketItem[i + 1].owner == msg.sender && idMarketItem[i + 1].isSold == false) {
                 itemCount += 1;
             }
         }
-        MarketItem[] memory items = new MarketItem[](itemCount);
-        uint256 currentIndex = 0;
 
-        for (uint256 i = 1; i <= totalCount; i++) {
-            if (idMarketItem[i + 1].seller == msg.sender) {
+        MarketItem[] memory items = new MarketItem[](itemCount);
+        uint256 currentIndex;
+
+        for (uint256 i = 0; i < totalCount; i++) {
+            if (idMarketItem[i + 1].owner == msg.sender && idMarketItem[i + 1].isSold == false) {
                 items[currentIndex] = idMarketItem[i + 1];
                 currentIndex += 1;
             }
         }
+
         return items;
     }
 }
