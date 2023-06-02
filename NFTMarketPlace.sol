@@ -16,7 +16,7 @@ contract NFTMarketPlace is ERC721URIStorage, Ownable {
     Counters.Counter private _tokenIds;
     Counters.Counter private _itemsSold;
 
-    uint256 listingPrice = 0.00025 ether;
+    uint256 listingPrice = 100 wei;
 
     mapping(uint256 => MarketItem) private idMarketItem;
 
@@ -131,8 +131,8 @@ contract NFTMarketPlace is ERC721URIStorage, Ownable {
 
         idMarketItem[tokenId].isSold = false;
         idMarketItem[tokenId].price = price;
-        idMarketItem[tokenId].seller = payable(msg.sender);
-        idMarketItem[tokenId].owner = payable(address(this));
+        idMarketItem[tokenId].seller = payable(address(this));
+        idMarketItem[tokenId].owner = payable(msg.sender);
         _itemsSold.decrement();
 
         _transfer(msg.sender, address(this), tokenId);
@@ -144,7 +144,7 @@ contract NFTMarketPlace is ERC721URIStorage, Ownable {
      */
     function createMarketSale(uint256 tokenId) public payable {
         uint256 price = idMarketItem[tokenId].price;
-        address  itemSeller = idMarketItem[tokenId].owner;
+        address itemSeller = idMarketItem[tokenId].owner;
 
         require(msg.value == price, "Please submit the asked price");
 
@@ -155,10 +155,9 @@ contract NFTMarketPlace is ERC721URIStorage, Ownable {
         payable(owner()).transfer(listingPrice);
         payable(idMarketItem[tokenId].owner).transfer(msg.value);
 
-
         idMarketItem[tokenId].seller = payable(itemSeller);
         idMarketItem[tokenId].isSold = true;
-        idMarketItem[tokenId].owner =  payable(msg.sender);
+        idMarketItem[tokenId].owner = payable(msg.sender);
     }
 
     /**
@@ -216,7 +215,10 @@ contract NFTMarketPlace is ERC721URIStorage, Ownable {
         uint256 itemCount = 0;
 
         for (uint256 i = 0; i < totalCount; i++) {
-            if (idMarketItem[i + 1].owner == msg.sender && idMarketItem[i + 1].isSold == false) {
+            if (
+                idMarketItem[i + 1].owner == msg.sender &&
+                idMarketItem[i + 1].isSold == false
+            ) {
                 itemCount += 1;
             }
         }
@@ -225,7 +227,10 @@ contract NFTMarketPlace is ERC721URIStorage, Ownable {
         uint256 currentIndex;
 
         for (uint256 i = 0; i < totalCount; i++) {
-            if (idMarketItem[i + 1].owner == msg.sender && idMarketItem[i + 1].isSold == false) {
+            if (
+                idMarketItem[i + 1].owner == msg.sender &&
+                idMarketItem[i + 1].isSold == false
+            ) {
                 items[currentIndex] = idMarketItem[i + 1];
                 currentIndex += 1;
             }
